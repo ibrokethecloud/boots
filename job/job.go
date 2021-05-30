@@ -2,7 +2,6 @@ package job
 
 import (
 	"net"
-	"os"
 	"time"
 
 	"github.com/packethost/pkg/log"
@@ -118,18 +117,6 @@ func CreateFromIP(ip net.IP) (Job, error) {
 	j.mac = mac
 
 	err = j.setup(d)
-	if err != nil {
-		return Job{}, err
-	}
-
-	if os.Getenv("DATA_MODEL_VERSION") != "1" {
-		return j, nil
-	}
-
-	hd := d.Hardware()
-	hwID := hd.HardwareID()
-
-	joblog.With("hardwareID", hwID).Info("fetching workflows for hardware")
 	if err != nil {
 		return Job{}, err
 	}

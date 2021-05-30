@@ -5,7 +5,6 @@ package job
 import (
 	"bytes"
 	"encoding/json"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tinkerbell/boots/packet"
@@ -33,7 +32,7 @@ func (j Job) DisablePXE() {
 		return
 	}
 
-	if err := client.UpdateInstance(j.instance.ID, strings.NewReader(`{"allow_pxe":false}`)); err != nil {
+	if err := client.UpdateNetBoot(j.instance.ID, false); err != nil {
 		j.Error(errors.WithMessage(err, "disabling PXE"))
 		return
 	}

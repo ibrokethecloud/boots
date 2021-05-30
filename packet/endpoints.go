@@ -286,3 +286,28 @@ func (c *Client) PostInstancePassword(id, pass string) error {
 func (c *Client) UpdateInstance(id string, body io.Reader) error {
 	return c.Patch("/devices/"+id, mimeJSON, body, nil)
 }
+
+// UpdateNetBoot updates the hardware to disable / enable netboot settings
+func (c *Client) UpdateNetBoot(id string, update bool) error {
+	tc := c.hardwareClient.(tink.HardwareServiceClient)
+	getMsg := &tink.GetRequest{
+		Id: id,
+	}
+	reqHw, err := tc.ByID(context.Background(), getMsg)
+	if err != nil {
+		return err
+	}
+
+	// update netboot status
+	for _, network := range reqHw.Network.Interfaces {
+		if network.Netboot.AllowPxe != update {
+			network.Netboot.AllowPxe = update
+		}
+	}
+
+	pushRequest := &tink.PushRequest{
+		Data: reqHw,
+	}
+	_, err = tc.Push(context.Background(), pushRequest)
+	return err
+}
