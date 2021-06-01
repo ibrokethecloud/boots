@@ -17,14 +17,14 @@ import (
 	"github.com/tinkerbell/boots/syslog"
 	"github.com/tinkerbell/boots/tftp"
 
+	"github.com/avast/retry-go"
 	_ "github.com/tinkerbell/boots/installers/coreos"
 	_ "github.com/tinkerbell/boots/installers/custom_ipxe"
+	_ "github.com/tinkerbell/boots/installers/harvester"
 	_ "github.com/tinkerbell/boots/installers/nixos"
 	_ "github.com/tinkerbell/boots/installers/osie"
 	_ "github.com/tinkerbell/boots/installers/rancher"
 	_ "github.com/tinkerbell/boots/installers/vmware"
-
-	"github.com/avast/retry-go"
 )
 
 var (
