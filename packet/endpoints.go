@@ -291,9 +291,9 @@ func (c *Client) UpdateInstance(id string, body io.Reader) error {
 func (c *Client) UpdateNetBoot(id string, update bool) error {
 	tc := c.hardwareClient.(tink.HardwareServiceClient)
 	getMsg := &tink.GetRequest{
-		Id: id,
+		Mac: id,
 	}
-	reqHw, err := tc.ByID(context.Background(), getMsg)
+	reqHw, err := tc.ByMAC(context.Background(), getMsg)
 	if err != nil {
 		return err
 	}

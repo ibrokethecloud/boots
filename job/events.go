@@ -27,12 +27,12 @@ func (j Job) CustomPXEDone() {
 }
 
 func (j Job) DisablePXE() {
-	if j.instance == nil {
+	if j.mac == nil {
 		j.Error(errors.New("instance is nil"))
 		return
 	}
 
-	if err := client.UpdateNetBoot(j.instance.ID, false); err != nil {
+	if err := client.UpdateNetBoot(j.mac.String(), false); err != nil {
 		j.Error(errors.WithMessage(err, "disabling PXE"))
 		return
 	}
