@@ -1,6 +1,7 @@
 package coreos
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ var facility = func() string {
 	if fac == "" {
 		fac = "ewr1"
 	}
+
 	return fac
 }()
 
@@ -26,13 +28,13 @@ func TestScript(t *testing.T) {
 				m.SetOSDistro(distro)
 
 				s := ipxe.Script{}
-				s.Echo("Packet.net Baremetal - iPXE boot")
+				s.Echo("Tinkerbell Boots iPXE")
 				s.Set("iface", "eth0").Or("shell")
 				s.Set("tinkerbell", "http://127.0.0.1")
 				s.Set("ipxe_cloud_config", "packet")
-
-				bootScript(m.Job(), &s)
-				got := string(s.Bytes())
+				i := Installer{}
+				bs := i.BootScript()(context.Background(), m.Job(), s)
+				got := string(bs.Bytes())
 				script = strings.Replace(script, "coreos", distro, -1)
 				if script != got {
 					t.Fatalf("%s bad iPXE script:\n%v", typ, diff.LineDiff(script, got))
@@ -43,7 +45,7 @@ func TestScript(t *testing.T) {
 }
 
 var type2Script = map[string]string{
-	"baremetal_0": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_0": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -59,7 +61,7 @@ kernel ${base-url}/coreos_production_pxe.vmlinuz console=ttyS1,115200n8 console=
 initrd ${base-url}/coreos_production_pxe_image.cpio.gz
 boot
 `,
-	"baremetal_1": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_1": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -75,7 +77,7 @@ kernel ${base-url}/coreos_production_pxe.vmlinuz console=ttyS1,115200n8 console=
 initrd ${base-url}/coreos_production_pxe_image.cpio.gz
 boot
 `,
-	"baremetal_2": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_2": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -91,7 +93,7 @@ kernel ${base-url}/coreos_production_pxe.vmlinuz console=ttyS1,115200n8 console=
 initrd ${base-url}/coreos_production_pxe_image.cpio.gz
 boot
 `,
-	"baremetal_3": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_3": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -107,7 +109,7 @@ kernel ${base-url}/coreos_production_pxe.vmlinuz console=ttyS1,115200n8 console=
 initrd ${base-url}/coreos_production_pxe_image.cpio.gz
 boot
 `,
-	"baremetal_2a": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_2a": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -123,7 +125,7 @@ kernel ${base-url}/coreos-arm.vmlinuz console=ttyAMA0,115200 initrd=coreos-arm.c
 initrd ${base-url}/coreos-arm.cpio.gz
 boot
 `,
-	"baremetal_2a2": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_2a2": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -139,7 +141,7 @@ kernel ${base-url}/coreos-arm.vmlinuz console=ttyAMA0,115200 initrd=coreos-arm.c
 initrd ${base-url}/coreos-arm.cpio.gz
 boot
 `,
-	"baremetal_hua": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_hua": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet

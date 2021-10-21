@@ -1,6 +1,7 @@
 package rancher
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -13,6 +14,7 @@ var facility = func() string {
 	if fac == "" {
 		fac = "ewr1"
 	}
+
 	return fac
 }()
 
@@ -22,13 +24,13 @@ func TestScript(t *testing.T) {
 			m := job.NewMock(t, typ, facility)
 
 			s := ipxe.Script{}
-			s.Echo("Packet.net Baremetal - iPXE boot")
+			s.Echo("Tinkerbell Boots iPXE")
 			s.Set("iface", "eth0").Or("shell")
 			s.Set("tinkerbell", "http://127.0.0.1")
 			s.Set("ipxe_cloud_config", "packet")
-
-			bootScript(m.Job(), &s)
-			got := string(s.Bytes())
+			r := Installer{}
+			bs := r.BootScript()(context.Background(), m.Job(), s)
+			got := string(bs.Bytes())
 			if script != got {
 				t.Fatalf("%s bad iPxe script\nwant:\n%s\ngot:\n%s", typ, script, got)
 			}
@@ -37,7 +39,7 @@ func TestScript(t *testing.T) {
 }
 
 var type2Script = map[string]string{
-	"baremetal_0": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_0": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -53,7 +55,7 @@ kernel ${base-url}/vmlinuz console=ttyS1,115200n8 rancher.cloud_init.datasources
 initrd ${base-url}/initrd
 boot
 `,
-	"baremetal_1": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_1": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -69,7 +71,7 @@ kernel ${base-url}/vmlinuz console=ttyS1,115200n8 rancher.cloud_init.datasources
 initrd ${base-url}/initrd
 boot
 `,
-	"baremetal_2": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_2": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -85,7 +87,7 @@ kernel ${base-url}/vmlinuz console=ttyS1,115200n8 rancher.cloud_init.datasources
 initrd ${base-url}/initrd
 boot
 `,
-	"baremetal_3": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_3": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -101,7 +103,7 @@ kernel ${base-url}/vmlinuz console=ttyS1,115200n8 rancher.cloud_init.datasources
 initrd ${base-url}/initrd
 boot
 `,
-	"baremetal_2a": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_2a": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -117,7 +119,7 @@ kernel ${base-url}/vmlinuz console=ttyS1,115200n8 rancher.cloud_init.datasources
 initrd ${base-url}/initrd
 boot
 `,
-	"baremetal_2a2": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_2a2": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet
@@ -133,7 +135,7 @@ kernel ${base-url}/vmlinuz console=ttyS1,115200n8 rancher.cloud_init.datasources
 initrd ${base-url}/initrd
 boot
 `,
-	"baremetal_hua": `echo Packet.net Baremetal - iPXE boot
+	"baremetal_hua": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set ipxe_cloud_config packet

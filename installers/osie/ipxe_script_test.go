@@ -1,6 +1,7 @@
 package osie
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"os"
@@ -27,6 +28,7 @@ var facility = func() string {
 	if fac == "" {
 		fac = "ewr1"
 	}
+
 	return fac
 }()
 
@@ -51,14 +53,23 @@ func TestScript(t *testing.T) {
 					m.SetMAC(mac)
 
 					s := ipxe.Script{}
-					s.Echo("Packet.net Baremetal - iPXE boot")
+					s.Echo("Tinkerbell Boots iPXE")
 					s.Set("iface", "eth0").Or("shell")
 					s.Set("tinkerbell", "http://127.0.0.1")
 					s.Set("syslog_host", "127.0.0.1")
 					s.Set("ipxe_cloud_config", "packet")
-
-					bootScripts[action](m.Job(), &s)
-					got := string(s.Bytes())
+					o := Installer{}
+					ctx := context.Background()
+					var bs ipxe.Script
+					switch action {
+					case "rescue":
+						bs = o.Rescue()(ctx, m.Job(), s)
+					case "install":
+						bs = o.Install()(ctx, m.Job(), s)
+					case "discover":
+						bs = o.Discover()(ctx, m.Job(), s)
+					}
+					got := string(bs.Bytes())
 
 					arch := "aarch64"
 					var parch string
@@ -94,7 +105,7 @@ func TestScript(t *testing.T) {
 }
 
 var prefaces = map[string]string{
-	"discover": `echo Packet.net Baremetal - iPXE boot
+	"discover": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set syslog_host 127.0.0.1
@@ -106,7 +117,7 @@ set parch %s
 set bootdevmac %s
 set base-url http://install.ewr1.packet.net/misc/osie/current
 `,
-	"install": `echo Packet.net Baremetal - iPXE boot
+	"install": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set syslog_host 127.0.0.1
@@ -124,7 +135,7 @@ set arch %s
 set parch %s
 set bootdevmac %s
 `,
-	"rescue": `echo Packet.net Baremetal - iPXE boot
+	"rescue": `echo Tinkerbell Boots iPXE
 set iface eth0 || shell
 set tinkerbell http://127.0.0.1
 set syslog_host 127.0.0.1

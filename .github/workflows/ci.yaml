@@ -5,43 +5,41 @@ on:
 
 jobs:
   validation:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64]
     env:
       CGO_ENABLED: 0
     steps:
       - name: Setup Dynamic Env
         run: |
-          echo "MAKEFLAGS=-j$(nproc)" >> $GITHUB_ENV
+          echo "MAKEFLAGS=-j$(nproc)" | tee $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v2
         with:
           lfs: true
       - name: Install nix
-        uses: cachix/install-nix-action@v12
+        uses: cachix/install-nix-action@018abf956a0a15673dae4932ae26f0f071ac0944
         with:
           nix_path: nixpkgs=channel:nixpkgs-unstable
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-        with:
-          version: "v0.4.1"
       - name: Non Go formatters and linters
         run: ./.github/workflows/ci-non-go.sh
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: "1.15.5"
+          go-version: "1.16.3"
       - name: Generate all files
-        run: nix-shell --run 'make gen'
+        run: nix-shell --run 'make gen && make ipxe'
       - name: goimports
         run: go get golang.org/x/tools/cmd/goimports && goimports -d . | (! grep .)
       - name: go vet
-        run: go vet ./...
+        run: go mod tidy && go vet ./...
       - name: golangci-lint brought to you by Nix
-        run: nix-shell --run 'GOROOT= golangci-lint run -v -D errcheck'
+        run: nix-shell --run 'GOROOT= golangci-lint run -v'
       - name: go test
         run: go test -v ./... -gcflags=-l
+      - name: Run iPXE tests
+        run: nix-shell --run 'make test-ipxe'
       - name: go test coverage
         run: go test -coverprofile=coverage.txt ./... -gcflags=-l
       - name: upload codecov
@@ -54,7 +52,7 @@ jobs:
           echo ::set-output name=tags::quay.io/tinkerbell/boots:latest,quay.io/tinkerbell/boots:sha-${GITHUB_SHA::8}
       - name: Login to quay.io
         uses: docker/login-action@v1
-        if: ${{ startsWith(github.ref, 'refs/heads/master') }}
+        if: ${{ startsWith(github.ref, 'refs/heads/main') }}
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
@@ -65,6 +63,6 @@ jobs:
           context: ./
           file: ./Dockerfile
           cache-from: type=registry,ref=quay.io/tinkerbell/boots:latest
-          push: ${{ startsWith(github.ref, 'refs/heads/master') }}
+          push: ${{ startsWith(github.ref, 'refs/heads/main') }}
           tags: ${{ steps.docker-image-tag.outputs.tags }}
           platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64

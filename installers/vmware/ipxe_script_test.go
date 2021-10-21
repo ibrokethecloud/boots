@@ -1,6 +1,7 @@
 package vmware
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -16,6 +17,7 @@ var facility = func() string {
 	if fac == "" {
 		fac = "ewr1"
 	}
+
 	return fac
 }()
 
@@ -24,13 +26,12 @@ func TestScriptPerType(t *testing.T) {
 		t.Run(typ, func(t *testing.T) {
 			for version, bootScript := range versions {
 				t.Run(version, func(t *testing.T) {
-
 					m := job.NewMock(t, typ, facility)
 					m.SetMAC("00:00:ba:dd:be:ef")
 
 					s := ipxe.Script{}
-					bootScript(m.Job(), &s)
-					got := string(s.Bytes())
+					bs := bootScript(context.Background(), m.Job(), s)
+					got := string(bs.Bytes())
 
 					want := fmt.Sprintf(script, version)
 					if !strings.Contains(want, version) {
@@ -46,8 +47,7 @@ func TestScriptPerType(t *testing.T) {
 }
 
 var type2pxe = map[string]string{
-	"baremetal_0": `dhcp
-
+	"baremetal_0": `
 params
 param body Device connected to DHCP system
 param type provisioning.104.01
@@ -58,8 +58,7 @@ set base-url http://install.ewr1.packet.net/vmware/%s
 kernel ${base-url}/mboot.c32 -c ${base-url}/boot.cfg ks=${tinkerbell}/vmware/ks-esxi.cfg netdevice=00:00:ba:dd:be:ef ksdevice=00:00:ba:dd:be:ef
 boot
 `,
-	"baremetal_1": `dhcp
-
+	"baremetal_1": `
 params
 param body Device connected to DHCP system
 param type provisioning.104.01
@@ -70,8 +69,7 @@ set base-url http://install.ewr1.packet.net/vmware/%s
 kernel ${base-url}/mboot.c32 -c ${base-url}/boot.cfg ks=${tinkerbell}/vmware/ks-esxi.cfg netdevice=00:00:ba:dd:be:ef ksdevice=00:00:ba:dd:be:ef
 boot
 `,
-	"baremetal_2": `dhcp
-
+	"baremetal_2": `
 params
 param body Device connected to DHCP system
 param type provisioning.104.01
@@ -82,8 +80,7 @@ set base-url http://install.ewr1.packet.net/vmware/%s
 kernel ${base-url}/mboot.c32 -c ${base-url}/boot.cfg ks=${tinkerbell}/vmware/ks-esxi.cfg netdevice=00:00:ba:dd:be:ef ksdevice=00:00:ba:dd:be:ef
 boot
 `,
-	"baremetal_3": `dhcp
-
+	"baremetal_3": `
 params
 param body Device connected to DHCP system
 param type provisioning.104.01
@@ -94,8 +91,7 @@ set base-url http://install.ewr1.packet.net/vmware/%s
 kernel ${base-url}/mboot.c32 -c ${base-url}/boot.cfg ks=${tinkerbell}/vmware/ks-esxi.cfg netdevice=00:00:ba:dd:be:ef ksdevice=00:00:ba:dd:be:ef
 boot
 `,
-	"baremetal_s": `dhcp
-
+	"baremetal_s": `
 params
 param body Device connected to DHCP system
 param type provisioning.104.01
@@ -106,8 +102,7 @@ set base-url http://install.ewr1.packet.net/vmware/%s
 kernel ${base-url}/mboot.c32 -c ${base-url}/boot.cfg ks=${tinkerbell}/vmware/ks-esxi.cfg netdevice=00:00:ba:dd:be:ef ksdevice=00:00:ba:dd:be:ef
 boot
 `,
-	"c2.medium.x86": `dhcp
-
+	"c2.medium.x86": `
 params
 param body Device connected to DHCP system
 param type provisioning.104.01
@@ -120,8 +115,8 @@ boot
 `,
 }
 
-var versions = map[string]func(job.Job, *ipxe.Script){
-	"esxi-5.5.0.update03": bootScriptVmwareEsxi55,
-	"esxi-6.0.0.update03": bootScriptVmwareEsxi60,
-	"esxi-6.5.0":          bootScriptVmwareEsxi65,
+var versions = map[string]job.BootScript{
+	"esxi-5.5.0.update03": Installer{}.BootScriptVmwareEsxi55(),
+	"esxi-6.0.0.update03": Installer{}.BootScriptVmwareEsxi60(),
+	"esxi-6.5.0":          Installer{}.BootScriptVmwareEsxi65(),
 }

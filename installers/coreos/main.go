@@ -1,32 +1,41 @@
 package coreos
 
 import (
+	"context"
+
 	"github.com/tinkerbell/boots/conf"
 	"github.com/tinkerbell/boots/ipxe"
 	"github.com/tinkerbell/boots/job"
 )
 
-func init() {
-	job.RegisterDistro("coreos", bootScript)
-	job.RegisterDistro("flatcar", bootScript)
-}
+const (
+	IgnitionPathCoreos  = "/coreos/ignition.json"
+	IgnitionPathFlatcar = "/flatcar/ignition.json"
+	OEMPath             = "/coreos/oem.tgz"
+)
 
 // Alternative Base URLs
 // http://storage.googleapis.com/alpha.release.core-os.net/amd64-usr/current
 // http://storage.googleapis.com/users.developer.core-os.net/mischief/boards/amd64-usr/962.0.0+2016-02-23-2254
 
-func bootScript(j job.Job, s *ipxe.Script) {
-	s.PhoneHome("provisioning.104.01")
-	s.Set("base-url", conf.MirrorURL)
-	s.Kernel("${base-url}/" + kernelPath(j))
+type Installer struct{}
 
-	kernelParams(j, s)
+func (i Installer) BootScript() job.BootScript {
+	return func(ctx context.Context, j job.Job, s ipxe.Script) ipxe.Script {
+		s.PhoneHome("provisioning.104.01")
+		s.Set("base-url", conf.MirrorURL)
+		s.Kernel("${base-url}/" + kernelPath(j))
 
-	s.Initrd("${base-url}/" + initrdPath(j))
-	s.Boot()
+		ks := kernelParams(j, s)
+
+		ks.Initrd("${base-url}/" + initrdPath(j))
+		ks.Boot()
+
+		return ks
+	}
 }
 
-func kernelParams(j job.Job, s *ipxe.Script) {
+func kernelParams(j job.Job, s ipxe.Script) ipxe.Script {
 	distro := j.OperatingSystem().Distro
 
 	// Linux Kernel
@@ -50,6 +59,8 @@ func kernelParams(j job.Job, s *ipxe.Script) {
 	// Environment Variables
 	s.Args("systemd.setenv=oem_url=${tinkerbell}/" + distro + "/oem.tgz") // To replace the files in our included OEM.
 	s.Args("systemd.setenv=phone_home_url=${tinkerbell}/phone-home")
+
+	return s
 }
 
 func kernelPath(j job.Job) string {
@@ -57,6 +68,7 @@ func kernelPath(j job.Job) string {
 	if j.IsARM() {
 		return distro + "-arm.vmlinuz"
 	}
+
 	return distro + "_production_pxe.vmlinuz"
 }
 
@@ -65,5 +77,6 @@ func initrdPath(j job.Job) string {
 	if j.IsARM() {
 		return distro + "-arm.cpio.gz"
 	}
+
 	return distro + "_production_pxe_image.cpio.gz"
 }

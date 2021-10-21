@@ -1,26 +1,30 @@
 package rancher
 
 import (
+	"context"
+
 	"github.com/tinkerbell/boots/ipxe"
 	"github.com/tinkerbell/boots/job"
 )
 
-func init() {
-	job.RegisterDistro("rancher", bootScript)
+type Installer struct{}
+
+func (i Installer) BootScript() job.BootScript {
+	return func(ctx context.Context, j job.Job, s ipxe.Script) ipxe.Script {
+		s.PhoneHome("provisioning.104.01")
+		s.Set("base-url", "http://releases.rancher.com/os/packet")
+		s.Kernel("${base-url}/vmlinuz")
+
+		ks := kernelParams(j, s)
+
+		ks.Initrd("${base-url}/initrd")
+		ks.Boot()
+
+		return ks
+	}
 }
 
-func bootScript(j job.Job, s *ipxe.Script) {
-	s.PhoneHome("provisioning.104.01")
-	s.Set("base-url", "http://releases.rancher.com/os/packet")
-	s.Kernel("${base-url}/vmlinuz")
-
-	kernelParams(j, s)
-
-	s.Initrd("${base-url}/initrd")
-	s.Boot()
-}
-
-func kernelParams(j job.Job, s *ipxe.Script) {
+func kernelParams(j job.Job, s ipxe.Script) ipxe.Script {
 	s.Args("console=ttyS1,115200n8")
 	s.Args("rancher.cloud_init.datasources=[url:${base-url}/packet.sh]")
 
@@ -31,4 +35,6 @@ func kernelParams(j job.Job, s *ipxe.Script) {
 	}
 
 	s.Args("tinkerbell=${tinkerbell}")
+
+	return s
 }

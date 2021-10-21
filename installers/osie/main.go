@@ -1,27 +1,28 @@
 package osie
 
 import (
+	"context"
 	"strings"
 
 	"github.com/tinkerbell/boots/conf"
 	"github.com/tinkerbell/boots/ipxe"
 	"github.com/tinkerbell/boots/job"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func init() {
-	job.RegisterDefaultInstaller(bootScripts["install"])
-	job.RegisterDistro("alpine", bootScripts["rescue"])
-	job.RegisterDistro("discovery", bootScripts["discover"])
-}
+type Installer struct{}
 
-var bootScripts = map[string]func(job.Job, *ipxe.Script){
-	"rescue": func(j job.Job, s *ipxe.Script) {
+func (i Installer) Rescue() job.BootScript {
+	return func(ctx context.Context, j job.Job, s ipxe.Script) ipxe.Script {
 		s.Set("action", "rescue")
 		s.Set("state", j.HardwareState())
-		bootScript("rescue", j, s)
-	},
-	// install should have been name osie... oh well too late now
-	"install": func(j job.Job, s *ipxe.Script) {
+
+		return bootScript(ctx, "rescue", j, s)
+	}
+}
+
+func (i Installer) Install() job.BootScript {
+	return func(ctx context.Context, j job.Job, s ipxe.Script) ipxe.Script {
 		typ := "provisioning.104.01"
 		if j.HardwareState() == "deprovisioning" {
 			typ = "deprovisioning.304.1"
@@ -33,35 +34,42 @@ var bootScripts = map[string]func(job.Job, *ipxe.Script){
 			s.Set("action", "install")
 		}
 		s.Set("state", j.HardwareState())
-		bootScript("install", j, s)
-	},
-	"discover": func(j job.Job, s *ipxe.Script) {
-		s.Set("action", "discover")
-		s.Set("state", j.HardwareState())
-		bootScript("discover", j, s)
-	},
+
+		return bootScript(ctx, "install", j, s)
+	}
 }
 
-func bootScript(action string, j job.Job, s *ipxe.Script) {
+func (i Installer) Discover() job.BootScript {
+	return func(ctx context.Context, j job.Job, s ipxe.Script) ipxe.Script {
+		s.Set("action", "discover")
+		s.Set("state", j.HardwareState())
+
+		return bootScript(ctx, "discover", j, s)
+	}
+}
+
+func bootScript(ctx context.Context, action string, j job.Job, s ipxe.Script) ipxe.Script {
 	s.Set("arch", j.Arch())
 	s.Set("parch", j.PArch())
 	s.Set("bootdevmac", j.PrimaryNIC().String())
 	s.Set("base-url", osieBaseURL(j))
 	s.Kernel("${base-url}/" + kernelPath(j))
 
-	kernelParams(action, j.HardwareState(), j, s)
+	ks := kernelParams(ctx, action, j.HardwareState(), j, s)
 
-	s.Initrd("${base-url}/" + initrdPath(j))
+	ks.Initrd("${base-url}/" + initrdPath(j))
 
 	if j.PArch() == "hua" || j.PArch() == "2a2" {
 		// Workaround for Huawei firmware crash
-		s.Sleep(15)
+		ks.Sleep(15)
 	}
 
-	s.Boot()
+	ks.Boot()
+
+	return ks
 }
 
-func kernelParams(action, state string, j job.Job, s *ipxe.Script) {
+func kernelParams(ctx context.Context, action, state string, j job.Job, s ipxe.Script) ipxe.Script {
 	s.Args("ip=dhcp") // Dracut?
 	s.Args("modules=loop,squashfs,sd-mod,usb-storage")
 	s.Args("alpine_repo=" + alpineMirror(j))
@@ -71,6 +79,18 @@ func kernelParams(action, state string, j job.Job, s *ipxe.Script) {
 	s.Args("parch=${parch}")
 	s.Args("packet_action=${action}")
 	s.Args("packet_state=${state}")
+
+	// only add traceparent if tracing is enabled
+	if sc := trace.SpanContextFromContext(ctx); sc.IsSampled() {
+		// manually assemble a traceparent string because the "right" way is clunkier
+		s.Args("traceparent=00-" + sc.TraceID().String() + "-" + sc.SpanID().String() + "-" + sc.TraceFlags().String())
+	}
+
+	// Only provide the Hollow secrets for deprovisions
+	if j.HardwareState() == "deprovisioning" && conf.HollowClientId != "" && conf.HollowClientRequestSecret != "" {
+		s.Args("hollow_client_id=" + conf.HollowClientId)
+		s.Args("hollow_client_request_secret=" + conf.HollowClientRequestSecret)
+	}
 
 	// Don't bother including eclypsium_token if none is provided
 	if conf.EclypsiumToken != "" && j.HardwareState() == "deprovisioning" {
@@ -129,13 +149,15 @@ func kernelParams(action, state string, j job.Job, s *ipxe.Script) {
 		}
 	} else {
 		s.Args("console=tty0")
-		if j.PlanSlug() == "d1p.optane.x86" || j.PlanSlug() == "d1f.optane.x86" || j.PlanSlug() == "f3.medium.x86" || j.PlanSlug() == "f3.large.x86" {
+		if j.PlanSlug() == "d1p.optane.x86" || j.PlanSlug() == "d1f.optane.x86" {
 			console = "ttyS0"
 		} else {
 			console = "ttyS1"
 		}
 	}
 	s.Args("console=" + console + ",115200")
+
+	return s
 }
 
 func alpineMirror(j job.Job) string {
@@ -150,6 +172,7 @@ func kernelPath(j job.Job) string {
 	if j.KernelPath() != "" {
 		return j.KernelPath()
 	}
+
 	return "vmlinuz-${parch}"
 }
 
@@ -157,6 +180,7 @@ func initrdPath(j job.Job) string {
 	if j.InitrdPath() != "" {
 		return j.InitrdPath()
 	}
+
 	return "initramfs-${parch}"
 }
 
@@ -172,6 +196,7 @@ func osieBaseURL(j job.Job) string {
 	if isCustomOSIE(j) {
 		return osieURL + "/" + j.OSIEVersion()
 	}
+
 	return osieURL + "/current"
 }
 
