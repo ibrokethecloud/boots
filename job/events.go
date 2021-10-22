@@ -28,25 +28,15 @@ func (j Job) CustomPXEDone(ctx context.Context) {
 	}
 }
 
-<<<<<<< HEAD
-func (j Job) DisablePXE() {
-	if j.mac == nil {
-=======
 func (j Job) DisablePXE(ctx context.Context) {
 	if j.instance == nil {
->>>>>>> f42cbcc77f5de420b2090184b0ef605a792817ee
 		j.Error(errors.New("instance is nil"))
 
 		return
 	}
 
-<<<<<<< HEAD
-	if err := client.UpdateNetBoot(j.mac.String(), false); err != nil {
-=======
-	if err := client.UpdateInstance(ctx, j.instance.ID, strings.NewReader(`{"allow_pxe":false}`)); err != nil {
->>>>>>> f42cbcc77f5de420b2090184b0ef605a792817ee
+	if err := client.UpdateNetBoot(ctx, j.mac.String(), false); err != nil {
 		j.Error(errors.WithMessage(err, "disabling PXE"))
-
 		return
 	}
 

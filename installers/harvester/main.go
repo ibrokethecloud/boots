@@ -1,38 +1,67 @@
 package harvester
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/tinkerbell/boots/ipxe"
 	"github.com/tinkerbell/boots/job"
 )
 
-func init() {
-	job.RegisterSlug("harvester_0_2_0", bootScriptHarvester)
+type Installer struct{}
 
+func (i Installer) BootScriptHarvester020() job.BootScript {
+	return func(ctx context.Context, j job.Job, s ipxe.Script) ipxe.Script {
+		return bootScriptHarvester(ctx, j, s, "v0.2.0")
+	}
 }
 
-func bootScriptHarvester(j job.Job, s *ipxe.Script) {
+func (i Installer) BootScriptHarvester030() job.BootScript {
+	return func(ctx context.Context, j job.Job, s ipxe.Script) ipxe.Script {
+		return bootScriptHarvester(ctx, j, s, "v0.3.0")
+	}
+}
+func bootScriptHarvester(ctx context.Context, j job.Job, s ipxe.Script, version string) ipxe.Script {
 	s.PhoneHome("provisioning.104.01")
 	if len(j.OSIEBaseURL()) != 0 {
 		s.Set("base-url", j.OSIEBaseURL())
 	} else {
-		s.Set("base-url", "https://releases.rancher.com/harvester/master")
+		s.Set("base-url", "https://releases.rancher.com/harvester")
 	}
 
-	s.Kernel("${base-url}/harvester-vmlinuz-amd64")
+	if version == "v0.2.0" {
+		s.Kernel(fmt.Sprintf("${base-url}/%s/harvester-vmlinuz-amd64", version))
+		s.Initrd(fmt.Sprintf("${base-url}/%s/harvester-initrd-amd64", version))
+	} else {
+		s.Kernel(fmt.Sprintf("${base-url}/%s/harvester-%s-vmlinuz-amd64", version, version))
+		s.Initrd(fmt.Sprintf("${base-url}/%s/harvester-%s-initrd-amd64", version, version))
+	}
 
 	j.With("parsed userdata", j.UserData())
-	kernelParams(j, s)
-
-	s.Initrd("${base-url}/harvester-initrd-amd64")
-	s.Boot()
+	ks := kernelParams(j, s, version)
+	ks.Boot()
 	// once boot script is served no long want this, since harvester install triggers a
 	// reboot of the node
-	j.DisablePXE()
+	j.DisablePXE(ctx)
+
+	return ks
 }
 
-func kernelParams(j job.Job, s *ipxe.Script) {
-	s.Args("k3os.mode=install", "k3os.debug", "console=tty1,115200", "harvester.install.automatic=true", "boot_cmd=\"echo include_ping_test=yes >> /etc/conf.d/net-online\"")
-	if len(j.UserData()) != 0 {
-		s.Args(j.UserData())
+func kernelParams(j job.Job, s ipxe.Script, version string) ipxe.Script {
+	currentUserData := j.UserData()
+
+	// we will check userdata to see if flags exist else we add the info //
+
+	switch version {
+	case "v0.2.0":
+		s.Args("k3os.mode=install", "k3os.debug", "console=tty1,115200", "harvester.install.automatic=true", "boot_cmd=\"echo include_ping_test=yes >> /etc/conf.d/net-online\"")
+	case "v0.3.0":
+		s.Args("rd.cos.disable", "rd.noverifyssl", "net.ifnames=1,console=tty1", "harvester.install.automatic=true")
+		s.Args(fmt.Sprintf("root=live:https://releases.rancher.com/harvester/%s/harvester-%s-rootfs-amd64.squashfs", version, version))
 	}
+	if len(currentUserData) != 0 {
+		s.Args(currentUserData)
+	}
+
+	return s
 }

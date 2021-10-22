@@ -42,6 +42,7 @@ type Client interface {
 	PostInstanceFail(ctx context.Context, id string, body io.Reader) error
 	PostInstancePassword(ctx context.Context, id, pass string) error
 	UpdateInstance(ctx context.Context, id string, body io.Reader) error
+	UpdateNetBoot(ctx context.Context, macAddress string, enable bool) error
 }
 
 var _ Client = &client{}

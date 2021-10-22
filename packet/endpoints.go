@@ -326,12 +326,12 @@ func (c *client) UpdateInstance(ctx context.Context, id string, body io.Reader) 
 }
 
 // UpdateNetBoot updates the hardware to disable / enable netboot settings
-func (c *Client) UpdateNetBoot(id string, update bool) error {
+func (c *client) UpdateNetBoot(ctx context.Context, id string, update bool) error {
 	tc := c.hardwareClient.(tink.HardwareServiceClient)
 	getMsg := &tink.GetRequest{
 		Mac: id,
 	}
-	reqHw, err := tc.ByMAC(context.Background(), getMsg)
+	reqHw, err := tc.ByMAC(ctx, getMsg)
 	if err != nil {
 		return err
 	}
@@ -346,6 +346,6 @@ func (c *Client) UpdateNetBoot(id string, update bool) error {
 	pushRequest := &tink.PushRequest{
 		Data: reqHw,
 	}
-	_, err = tc.Push(context.Background(), pushRequest)
+	_, err = tc.Push(ctx, pushRequest)
 	return err
 }

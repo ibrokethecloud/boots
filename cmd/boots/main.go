@@ -19,14 +19,14 @@ import (
 	"github.com/tinkerbell/boots/syslog"
 	"github.com/tinkerbell/boots/tftp"
 
+	"github.com/avast/retry-go"
 	"github.com/tinkerbell/boots/installers/coreos"
 	"github.com/tinkerbell/boots/installers/custom_ipxe"
+	"github.com/tinkerbell/boots/installers/harvester"
 	"github.com/tinkerbell/boots/installers/nixos"
 	"github.com/tinkerbell/boots/installers/osie"
 	"github.com/tinkerbell/boots/installers/rancher"
 	"github.com/tinkerbell/boots/installers/vmware"
-
-	"github.com/avast/retry-go"
 )
 
 var (
@@ -143,5 +143,9 @@ func registerInstallers() job.Installers {
 	i.RegisterSlug("vmware_esxi_7_0_vcf", v.BootScriptVmwareEsxi70())
 	i.RegisterDistro("vmware", v.BootScriptDefault())
 
+	//register harvester
+	h := harvester.Installer{}
+	i.RegisterSlug("harvester_0_2_0", h.BootScriptHarvester020())
+	i.RegisterSlug("harvester_0_3_0", h.BootScriptHarvester030())
 	return i
 }
