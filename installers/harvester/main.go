@@ -54,7 +54,7 @@ func kernelParams(j job.Job, s ipxe.Script, version string) ipxe.Script {
 		s.Args("k3os.mode=install", "k3os.debug", "console=tty1,115200", "harvester.install.automatic=true", "boot_cmd=\"echo include_ping_test=yes >> /etc/conf.d/net-online\"")
 	case "v0.3.0":
 		s.Kernel(fmt.Sprintf("${base-url}/%s/harvester-%s-vmlinuz-amd64", version, version))
-		s.Args("rd.cos.disable", "rd.noverifyssl", "net.ifnames=1", "console=tty1")
+		s.Args("rd.cos.disable", "rd.noverifyssl", "net.ifnames=1", "console=tty1", "harvester.install.automatic=true", "boot_cmd=\"echo include_ping_test=yes >> /etc/conf.d/net-online\"")
 	}
 	if len(currentUserData) != 0 {
 		s.Args(currentUserData)
