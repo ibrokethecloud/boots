@@ -55,7 +55,7 @@ func kernelParams(j job.Job, s ipxe.Script, version string) ipxe.Script {
 	case "v0.3.0":
 		s.Kernel(fmt.Sprintf("${base-url}/%s/harvester-%s-vmlinuz-amd64", version, version))
 		s.Args("rd.cos.disable", "rd.noverifyssl", "net.ifnames=1", "console=tty1", "harvester.install.automatic=true", "boot_cmd=\"echo include_ping_test=yes >> /etc/conf.d/net-online\"")
-		s.Args(fmt.Sprintf("root=live:https://releases.rancher.com/harvester/%s/harvester-%s-rootfs-amd64.squashfs", version, version))
+		s.Args(fmt.Sprintf("root=live:${base-url}/%s/harvester-%s-rootfs-amd64.squashfs", version, version))
 	}
 	if len(currentUserData) != 0 {
 		s.Args(currentUserData)
