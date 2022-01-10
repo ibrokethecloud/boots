@@ -21,6 +21,13 @@ func (i Installer) BootScriptHarvester030() job.BootScript {
 		return bootScriptHarvester(ctx, j, s, "v0.3.0")
 	}
 }
+
+func (i Installer) BootScriptHarvester100() job.BootScript {
+	return func(ctx context.Context, j job.Job, s ipxe.Script) ipxe.Script {
+		return bootScriptHarvester(ctx, j, s, "v1.0.0")
+	}
+}
+
 func bootScriptHarvester(ctx context.Context, j job.Job, s ipxe.Script, version string) ipxe.Script {
 	s.PhoneHome("provisioning.104.01")
 	if len(j.OSIEBaseURL()) != 0 {
@@ -52,7 +59,7 @@ func kernelParams(j job.Job, s ipxe.Script, version string) ipxe.Script {
 	case "v0.2.0":
 		s.Kernel(fmt.Sprintf("${base-url}/%s/harvester-vmlinuz-amd64", version))
 		s.Args("k3os.mode=install", "k3os.debug", "console=tty1,115200", "harvester.install.automatic=true", "boot_cmd=\"echo include_ping_test=yes >> /etc/conf.d/net-online\"")
-	case "v0.3.0":
+	default:
 		s.Kernel(fmt.Sprintf("${base-url}/%s/harvester-%s-vmlinuz-amd64", version, version))
 		s.Args("rd.cos.disable", "rd.noverifyssl", "net.ifnames=1", "console=tty1", "harvester.install.automatic=true", "boot_cmd=\"echo include_ping_test=yes >> /etc/conf.d/net-online\"")
 		s.Args(fmt.Sprintf("root=live:${base-url}/%s/harvester-%s-rootfs-amd64.squashfs", version, version))

@@ -147,5 +147,6 @@ func registerInstallers() job.Installers {
 	h := harvester.Installer{}
 	i.RegisterSlug("harvester_0_2_0", h.BootScriptHarvester020())
 	i.RegisterSlug("harvester_0_3_0", h.BootScriptHarvester030())
+	i.RegisterSlug("harvester_1_0_0", h.BootScriptHarvester100())
 	return i
 }
