@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/tinkerbell/boots/installers/ros2"
 	"time"
 
 	"github.com/equinix-labs/otel-init-go/otelinit"
@@ -148,5 +149,8 @@ func registerInstallers() job.Installers {
 	i.RegisterSlug("harvester_0_2_0", h.BootScriptHarvester020())
 	i.RegisterSlug("harvester_0_3_0", h.BootScriptHarvester030())
 	i.RegisterSlug("harvester_1_0_0", h.BootScriptHarvester100())
+
+	ros2 := ros2.Installer{}
+	i.RegisterDistro("ros", ros2.BootScript())
 	return i
 }
